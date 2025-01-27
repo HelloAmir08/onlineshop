@@ -24,7 +24,8 @@
                 class="navbar-toggler-icon"></span></button>
         <div class="collapse navbar-collapse" id="navbarSupportedContent">
             <ul class="navbar-nav me-auto mb-2 mb-lg-0 ms-lg-4">
-                <li class="nav-item"><a class="nav-link active" aria-current="page" href="{% url 'products' %}">Home</a></li>
+                <li class="nav-item"><a class="nav-link active" aria-current="page" href="{% url 'products' %}">Home</a>
+                </li>
                 <li class="nav-item"><a class="nav-link" href="#!">About</a></li>
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle" id="navbarDropdown" href="#" role="button"
@@ -38,13 +39,16 @@
                         <li><a class="dropdown-item" href="#!">New Arrivals</a></li>
                     </ul>
                 </li>
+                {% if user.is_authenticated %}
+                <li class="nav-item"><a class="nav-link active" aria-current="page" href="{% url 'product_edit' product.pk %}">Update product</a>
+                <li class="nav-item"><a class="nav-link active" aria-current="page" href="{% url 'product_delete' product.pk %}">Delete product</a>    
+                {% endif %}
             </ul>
             <form class="d-flex">
                 <input type="text" class="form-contro">
                 <button class="btn btn-outline-dark" type="submit">
                     <i class="bi-search-fill me-1"></i>
                     Search
-
                 </button>
             </form>
         </div>
@@ -60,12 +64,14 @@
                 <div class="small mb-1">Quantity:{{ product.quantity }}</div>
                 <h1 class="display-5 fw-bolder">{{ product.name }}</h1>
                 <div class="fs-5 mb-5">
-                    <span class="text-decoration-line-through">{{ product.price }}</span>
-                    <span>{{ product.discounted_price}}</span>
+                    {% if product.discount > 0 %}
+                    <span class="text-decoration-line-through">{{ product.price }}$</span>
+                    {% endif %}
+                    <span>{{ product.discounted_price }}</span>
                 </div>
                 <p class="lead">{{ product.description }}</p>
                 <div class="d-flex">
-                    <form method="get" action="{% url 'order_detail' product.id%}">
+                    <form method="get" action="{% url 'order_detail' product.id %}">
                         <div class="form-group">
                             <h2>Place an order</h2>
                         </div>
@@ -97,59 +103,55 @@
         </div>
     </div>
 </section>
-
 <div class="container mt-4 mb-4">
     <div class="row">
+        <!-- Latest Comments Section -->
         <div class="col-12">
             <div class="text-center">
-                <h2>Latest comments</h2>
+                <h2>Latest Comments</h2>
             </div>
             <div class="media card p-4 mt-2">
                 <div class="media-body">
                     {% for comment in comments %}
-                    <h3 class="mt-0">{{ comment.full_name }}</h3>
-                    <p>{{ comment.description }}</p>
-                {% empty %}
-                    <p>No comments available.</p>
-                {% endfor %}
-
+                        <h3 class="mt-0">{{ comment.full_name }}</h3>
+                        <p>{{ comment.description }}</p>
+                    {% empty %}
+                        <p>No comments available.</p>
+                    {% endfor %}
                 </div>
             </div>
         </div>
 
+        <!-- Add Comment Section -->
         <div class="col-8 offset-2 mt-5">
-
-            <div class=" p-5">
+            <div class="p-5">
                 <div class="text-center">
                     <h3>Add Comment</h3>
                 </div>
 
-                <form method="get" action="{% url 'comment_detail' product.id%}">
+                <form method="post" action="{% url 'comment_detail' product.id %}">
+                    {% csrf_token %}
                     <div class="form-group mb-3">
                         <label for="formGroupExampleInput">Your name</label>
-                        <input type="text" name="full_name" class="form-control" placeholder="Your name">
+                        <input type="text" name="full_name" class="form-control" placeholder="Your name" required>
                     </div>
                     <div class="form-group mb-3">
                         <label for="formGroupExampleInput2">Your email</label>
-                        <input type="text" name="email" class="form-control" placeholder="Your email">
+                        <input type="email" name="email" class="form-control" placeholder="Your email" required>
                     </div>
-
                     <div class="form-group mb-3">
                         <label for="formGroupExampleInput2">Your comment</label>
-                        <textarea name="description" class="form-control" id="" cols="30" rows="10"></textarea>
+                        <textarea name="description" class="form-control" cols="30" rows="10" placeholder="Your comment" required></textarea>
                     </div>
-
                     <div class="form-group mb-3">
-
                         <input type="submit" class="btn btn-success" value="Send">
                     </div>
                 </form>
-
             </div>
-
         </div>
     </div>
 </div>
+
 <!-- Related items section-->
 <section class="py-5 bg-light">
     <div class="container px-4 px-lg-5 mt-5">
