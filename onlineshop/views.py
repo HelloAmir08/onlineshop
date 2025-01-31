@@ -10,12 +10,36 @@ from django.contrib import messages
 
 
 def index(request, category_id: Optional[int] = None):
+    search_query = request.GET.get('q', '')
+    filter_type = request.GET.get('filter', '')
     categories = Category.objects.all()
 
     if category_id:
-        products = Product.objects.filter(category_id=category_id)
+        if filter_type == 'expensive':
+            products = Product.objects.filter(category_id=category_id).order_by('-price')[:5]
+        elif filter_type == 'cheap':
+            products = Product.objects.filter(category_id=category_id).order_by('price')[:5]
+        elif filter_type == 'rating':
+            products = Product.objects.filter(category_id=category_id, rating__gte=4).order_by('-rating')
+
+        else:
+            products = Product.objects.filter(category_id=category_id)
+
     else:
-        products = Product.objects.all()
+        if filter_type == 'expensive':
+            products = Product.objects.all().order_by('-price')[:5]
+        elif filter_type == 'cheap':
+            products = Product.objects.all().order_by('price')[:5]
+        elif filter_type == 'rating':
+            products = Product.objects.filter(rating__gte=4).order_by('-rating')
+
+        else:
+            products = Product.objects.all()
+
+    if search_query:
+        products = Product.objects.filter(name__icontains=search_query)
+
+    # .order_by('-id')
 
     context = {
         'products': products,
@@ -26,10 +50,13 @@ def index(request, category_id: Optional[int] = None):
 
 def product_detail(request, pk):
     product = get_object_or_404(Product, pk=pk)
-    # product = Product.objects.get(id=pk)
+    comments = Comment.objects.filter(product=product)
+    related_products = Product.objects.filter(category_id=product.category).exclude(id=product.id)
+
     context = {
         'product': product,
-        'comments': product.comments.all(),
+        'comments': comments,
+        'related_products': related_products
     }
     return render(request, 'shop/detail.html', context=context)
 

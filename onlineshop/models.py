@@ -68,7 +68,7 @@ class Order(BaseModel):
     full_name = models.CharField(max_length=255, null=True, blank=True)
     phone_number = PhoneNumberField(region="UZ")
     quantity = models.PositiveIntegerField(default=1)
-    product = models.ForeignKey(Product, on_delete=models.SET_NULL, null=True, blank=True)
+    product = models.ForeignKey(Product, on_delete=models.SET_NULL, null=True, blank=True, related_name='orders')
 
     def __str__(self):
         return f'{self.full_name}, {self.phone_number}'
@@ -80,7 +80,5 @@ class Comment(BaseModel):
     full_name = models.CharField(max_length=255)
     email = models.EmailField()
     description = models.TextField()
-    created_at = models.DateTimeField(auto_now_add=True)
-
     def __str__(self):
         return self.full_name
