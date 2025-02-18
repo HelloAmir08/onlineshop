@@ -1,74 +1,66 @@
-from typing import Optional
-from django.shortcuts import render, get_object_or_404, redirect
-from onlineshop.forms import OrderForm, CommentForm, ProductForm
-from onlineshop.models import Product, Category, Order, Comment
+from django.shortcuts import get_object_or_404, redirect
+from django.views import View
+from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
+from django.urls import reverse_lazy
 from django.contrib import messages
+from onlineshop.models import Product, Category, Order, Comment
+from onlineshop.forms import OrderForm, CommentForm, ProductForm
 
 
+class ProductListView(ListView):
+    model = Product
+    template_name = 'shop/index.html'
+    context_object_name = 'products'
 
-# Create your views here.
+    def get_queryset(self):
+        search_query = self.request.GET.get('q', '')
+        filter_type = self.request.GET.get('filter', '')
+        category_id = self.kwargs.get('category_id')
+        products = Product.objects.all()
 
+        if category_id:
+            products = products.filter(category_id=category_id)
 
-def index(request, category_id: Optional[int] = None):
-    search_query = request.GET.get('q', '')
-    filter_type = request.GET.get('filter', '')
-    categories = Category.objects.all()
-
-    if category_id:
         if filter_type == 'expensive':
-            products = Product.objects.filter(category_id=category_id).order_by('-price')[:5]
+            products = products.order_by('-price')[:5]
         elif filter_type == 'cheap':
-            products = Product.objects.filter(category_id=category_id).order_by('price')[:5]
+            products = products.order_by('price')[:5]
         elif filter_type == 'rating':
-            products = Product.objects.filter(category_id=category_id, rating__gte=4).order_by('-rating')
+            products = products.filter(rating__gte=4).order_by('-rating')
 
-        else:
-            products = Product.objects.filter(category_id=category_id)
+        if search_query:
+            products = products.filter(name__icontains=search_query)
 
-    else:
-        if filter_type == 'expensive':
-            products = Product.objects.all().order_by('-price')[:5]
-        elif filter_type == 'cheap':
-            products = Product.objects.all().order_by('price')[:5]
-        elif filter_type == 'rating':
-            products = Product.objects.filter(rating__gte=4).order_by('-rating')
+        return products
 
-        else:
-            products = Product.objects.all()
-
-    if search_query:
-        products = Product.objects.filter(name__icontains=search_query)
-
-    # .order_by('-id')
-
-    context = {
-        'products': products,
-        'categories': categories,
-    }
-    return render(request, 'shop/index.html', context=context)
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['categories'] = Category.objects.all()
+        return context
 
 
-def product_detail(request, pk):
-    product = get_object_or_404(Product, pk=pk)
-    comments = Comment.objects.filter(product=product)
-    related_products = Product.objects.filter(category_id=product.category).exclude(id=product.id)
+class ProductDetailView(DetailView):
+    model = Product
+    template_name = 'shop/detail.html'
+    context_object_name = 'product'
 
-    context = {
-        'product': product,
-        'comments': comments,
-        'related_products': related_products
-    }
-    return render(request, 'shop/detail.html', context=context)
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['comments'] = Comment.objects.filter(product=self.object)
+        context['related_products'] = Product.objects.filter(category=self.object.category).exclude(id=self.object.id)
+        return context
 
 
-def order_detail(request, pk):
-    product = get_object_or_404(Product, pk=pk)
-    if request.method == 'GET':
-        form = OrderForm(request.GET)
+class OrderCreateView(View):
+    def post(self, request, pk):
+        product = get_object_or_404(Product, pk=pk)
+        form = OrderForm(request.POST)  # Используем POST, а не GET
+
         if form.is_valid():
-            full_name = request.GET.get('full_name')
-            phone_number = request.GET.get('phone_number')
-            quantity = int(request.GET.get('quantity'))
+            full_name = form.cleaned_data.get('full_name')
+            phone_number = form.cleaned_data.get('phone_number')
+            quantity = form.cleaned_data.get('quantity')
+
             if product.quantity >= quantity:
                 product.quantity -= quantity
                 order = Order.objects.create(
@@ -79,36 +71,19 @@ def order_detail(request, pk):
                 )
                 order.save()
                 product.save()
-                messages.add_message(
-                    request,
-                    messages.SUCCESS,
-                    'Order successfully created.'
-
-                )
-
+                messages.success(request, 'Order successfully created.')
             else:
-                messages.add_message(
-                    request,
-                    messages.ERROR,
-                    'Order quantity is less than the product quantity.'
-                )
+                messages.error(request, 'Order quantity exceeds available stock.')
+        else:
+            print(form.errors)
 
-
-    else:
-        form = OrderForm()
-    context = {
-        'form': form,
-        'product': product
-    }
-
-    return render(request, 'shop/detail.html', context=context)
+        return redirect('product_detail', pk=pk)
 
 
 
-
-def comment_detail(request, pk):
-    product = get_object_or_404(Product, pk=pk)
-    if request.method == 'POST':
+class CommentCreateView(View):
+    def post(self, request, pk):
+        product = get_object_or_404(Product, pk=pk)
         form = CommentForm(request.POST)
         if form.is_valid():
             Comment.objects.create(
@@ -117,52 +92,44 @@ def comment_detail(request, pk):
                 email=form.cleaned_data['email'],
                 description=form.cleaned_data['description']
             )
-            return redirect('comment_detail', pk=product.pk)
-    else:
-        form = CommentForm()
-    comments = product.comments.all().order_by('-created_at')
-    context = {
-        'product': product,
-        'form': form,
-        'comments': comments,
-    }
-    return render(request, 'shop/detail.html', context)
+        return redirect('product_detail', pk=pk)
 
 
-def create_product(request):
-    if request.method == 'POST':
-        form = ProductForm(request.POST, request.FILES)
-        if form.is_valid():
-            form.save()
-            return redirect("products")
-    else:
-        form = ProductForm()
 
-    categories = Category.objects.all()
-    context = {
-        'form': form,
-        'categories': categories,
-    }
-    return render(request, 'shop/admin_panel/CREATE.html', context=context)
+class ProductCreateView(CreateView):
+    model = Product
+    form_class = ProductForm
+    template_name = 'shop/admin_panel/CREATE.html'
+    success_url = reverse_lazy('products')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['categories'] = Category.objects.all()
+        context['selected_category'] = self.request.GET.get('category', None)
+        return context
 
 
-def product_edit(request, pk):
-    product = Product.objects.get(id=pk)
-    form = ProductForm(instance=product)
-    if request.method == 'POST':
-        form = ProductForm(request.POST, request.FILES, instance=product)
-        if form.is_valid():
-            form.save()
-            return redirect('product_detail', pk)
-    context = {
-        'form': form,
-        'product': product,
-        'categories': Category.objects.all(),
-    }
-    return render(request, 'shop/admin_panel/Update.html', context=context)
+class ProductUpdateView(UpdateView):
+    model = Product
+    form_class = ProductForm
+    template_name = 'shop/admin_panel/Update.html'
 
-def product_delete(request, pk):
-    product = Product.objects.get(id=pk)
-    product.delete()
-    return redirect('products')
+    def get_success_url(self):
+        return reverse_lazy('product_detail', kwargs={'pk': self.object.pk})
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['categories'] = Category.objects.all()
+        context['selected_category'] = self.request.GET.get('category', None)
+        return context
+
+
+class ProductDeleteView(View):
+    def post(self, request, *args, **kwargs):
+        product = get_object_or_404(Product, pk=kwargs['pk'])
+        product.delete()
+        return redirect(reverse_lazy('products'))
+
+    def get(self, request, *args, **kwargs):
+        return self.post(request, *args, **kwargs)
 

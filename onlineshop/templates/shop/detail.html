@@ -40,8 +40,11 @@
                     </ul>
                 </li>
                 {% if user.is_authenticated %}
-                <li class="nav-item"><a class="nav-link active" aria-current="page" href="{% url 'product_edit' product.pk %}">Update product</a>
-                <li class="nav-item"><a class="nav-link active" aria-current="page" href="{% url 'product_delete' product.pk %}">Delete product</a>    
+                    <li class="nav-item"><a class="nav-link active" aria-current="page"
+                                            href="{% url 'product_edit' product.pk %}">Update product</a>
+                    <li class="nav-item">
+                    <a class="nav-link active" aria-current="page" href="{% url 'product_delete' product.pk %}">Delete
+                        product</a>
                 {% endif %}
             </ul>
             <form class="d-flex">
@@ -65,13 +68,14 @@
                 <h1 class="display-5 fw-bolder">{{ product.name }}</h1>
                 <div class="fs-5 mb-5">
                     {% if product.discount > 0 %}
-                    <span class="text-decoration-line-through">{{ product.price }}$</span>
+                        <span class="text-decoration-line-through">{{ product.price }}$</span>
                     {% endif %}
                     <span>{{ product.discounted_price }}</span>
                 </div>
                 <p class="lead">{{ product.description }}</p>
                 <div class="d-flex">
-                    <form method="get" action="{% url 'order_detail' product.id %}">
+                    <form method="post" action="{% url 'order_detail' product.id %}">
+                        {% csrf_token %}
                         <div class="form-group">
                             <h2>Place an order</h2>
                         </div>
@@ -91,6 +95,7 @@
                             <input type="submit" class="btn btn-success" value="Send">
                         </div>
                     </form>
+
                     {% if messages %}
                         <ul class="messages">
                             {% for message in messages %}
@@ -141,7 +146,8 @@
                     </div>
                     <div class="form-group mb-3">
                         <label for="formGroupExampleInput2">Your comment</label>
-                        <textarea name="description" class="form-control" cols="30" rows="10" placeholder="Your comment" required></textarea>
+                        <textarea name="description" class="form-control" cols="30" rows="10" placeholder="Your comment"
+                                  required></textarea>
                     </div>
                     <div class="form-group mb-3">
                         <input type="submit" class="btn btn-success" value="Send">
@@ -158,31 +164,31 @@
         <h2 class="fw-bolder mb-4">Related products</h2>
         <div class="row gx-4 gx-lg-5 row-cols-2 row-cols-md-3 row-cols-xl-4 justify-content-center">
             {% for product in related_products %}
-                    <div class="col mb-5">
-                        <div class="card h-100">
-                            <!-- Product image-->
-                            <img class="card-img-top"
-                                 src="{{ product.get_absolute_url }}" alt="..."/>
-                            <!-- Product details-->
-                            <div class="card-body p-4">
-                                <div class="text-center">
-                                    <!-- Product name-->
-                                    <h5 class="fw-bolder">{{ product.name }}</h5>
-                                    <!-- Product price-->
-                                    {{ product.price }}
-                                </div>
-                            </div>
-                            <!-- Product actions-->
-                            <div class="card-footer p-4 pt-0 border-top-0 bg-transparent">
-                                <div class="text-center"><a class="btn btn-outline-dark mt-auto"
-                                                            href="{% url 'product_detail' product.id %}">View
-                                    product</a></div>
-
-
+                <div class="col mb-5">
+                    <div class="card h-100">
+                        <!-- Product image-->
+                        <img class="card-img-top"
+                             src="{{ product.get_absolute_url }}" alt="..."/>
+                        <!-- Product details-->
+                        <div class="card-body p-4">
+                            <div class="text-center">
+                                <!-- Product name-->
+                                <h5 class="fw-bolder">{{ product.name }}</h5>
+                                <!-- Product price-->
+                                {{ product.price }}
                             </div>
                         </div>
+                        <!-- Product actions-->
+                        <div class="card-footer p-4 pt-0 border-top-0 bg-transparent">
+                            <div class="text-center"><a class="btn btn-outline-dark mt-auto"
+                                                        href="{% url 'product_detail' product.id %}">View
+                                product</a></div>
+
+
+                        </div>
                     </div>
-                {% endfor %}
+                </div>
+            {% endfor %}
         </div>
     </div>
 </section>

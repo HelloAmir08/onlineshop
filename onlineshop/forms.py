@@ -1,12 +1,14 @@
 from django import forms
-from phonenumber_field.modelfields import PhoneNumberField
+from phonenumber_field.formfields import PhoneNumberField
 from onlineshop.models import Comment, Product
 
 
+
 class OrderForm(forms.Form):
-    full_name = forms.CharField()
-    phone_number = PhoneNumberField(region='UZ')
-    quantity = forms.IntegerField()
+    full_name = forms.CharField(max_length=255)
+    phone_number = PhoneNumberField(region="UZ")
+    quantity = forms.IntegerField(min_value=1)
+
 
 
 class CommentForm(forms.ModelForm):
