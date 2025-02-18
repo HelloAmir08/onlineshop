@@ -54,7 +54,7 @@ class ProductDetailView(DetailView):
 class OrderCreateView(View):
     def post(self, request, pk):
         product = get_object_or_404(Product, pk=pk)
-        form = OrderForm(request.POST)  # Используем POST, а не GET
+        form = OrderForm(request.POST)
 
         if form.is_valid():
             full_name = form.cleaned_data.get('full_name')
@@ -74,9 +74,6 @@ class OrderCreateView(View):
                 messages.success(request, 'Order successfully created.')
             else:
                 messages.error(request, 'Order quantity exceeds available stock.')
-        else:
-            print(form.errors)
-
         return redirect('product_detail', pk=pk)
 
 
